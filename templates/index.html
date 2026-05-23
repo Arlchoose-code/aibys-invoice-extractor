@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aibys Invoice Extractor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --surface2: #1a1a24;
+      --border: #2a2a3a;
+      --accent: #7c6bff;
+      --accent2: #00e5c0;
+      --accent3: #ff6b6b;
+      --text: #f0f0f8;
+      --text2: #888899;
+      --text3: #555566;
+      --radius: 12px;
+      --font-main: 'Syne', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* HEADER */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: rgba(10,10,15,0.92);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .status-badge {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text3);
+    }
+    .status-dot.online { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+    .status-dot.offline { background: var(--accent3); }
+
+    /* MAIN LAYOUT */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 3rem 0 2.5rem;
+    }
+
+    .hero-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      border: 1px solid rgba(124,107,255,0.3);
+      padding: 0.3rem 0.8rem;
+      border-radius: 999px;
+      margin-bottom: 1.2rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      color: var(--text2);
+      font-size: 1rem;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* UPLOAD ZONE */
+    .upload-section {
+      margin: 2rem 0;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--surface);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .drop-zone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(124,107,255,0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(124,107,255,0.05);
+    }
+
+    .drop-zone.dragover {
+      transform: scale(1.01);
+    }
+
+    .drop-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .drop-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .drop-sub {
+      font-size: 0.85rem;
+      color: var(--text2);
+      font-family: var(--font-mono);
+    }
+
+    #file-input { display: none; }
+
+    /* FILE PREVIEW */
+    .file-preview {
+      display: none;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-top: 1rem;
+    }
+
+    .file-preview.show { display: flex; }
+
+    .file-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .file-info { flex: 1; min-width: 0; }
+    .file-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-size { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text2); }
+
+    .btn-remove {
+      background: none;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 0.2rem;
+      transition: color 0.15s;
+    }
+    .btn-remove:hover { color: var(--accent3); }
+
+    /* BUTTONS */
+    .btn-primary {
+      width: 100%;
+      padding: 0.9rem 2rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-main);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #9080ff;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(124,107,255,0.3);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary.loading::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      animation: shimmer 1.2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    /* RESULTS */
+    #results { display: none; margin-top: 2.5rem; }
+    #results.show { display: block; animation: fadeUp 0.4s ease; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .results-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .btn-export {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.2rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--accent2);
+      font-family: var(--font-main);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-export:hover {
+      border-color: var(--accent2);
+      background: rgba(0,229,192,0.07);
+    }
+
+    /* TABS */
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
+    }
+
+    .tab {
+      padding: 0.6rem 1.2rem;
+      font-family: var(--font-main);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text2);
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.15s;
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeUp 0.2s ease; }
+
+    /* CARDS */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+
+    .card-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 0.85rem;
+    }
+
+    .card-row:last-child { border-bottom: none; }
+    .card-key { color: var(--text2); flex-shrink: 0; }
+    .card-val { color: var(--text); text-align: right; word-break: break-word; font-weight: 500; }
+    .card-val.empty { color: var(--text3); font-style: italic; }
+
+    /* ITEMS TABLE */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    thead {
+      background: var(--surface2);
+    }
+
+    th {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text2);
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: var(--text);
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .td-num {
+      text-align: right;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+    }
+
+    /* SUMMARY ROW */
+    .summary-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 1rem;
+    }
+
+    .summary-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.5rem;
+      min-width: 240px;
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 2rem;
+      padding: 0.3rem 0;
+      font-size: 0.85rem;
+      color: var(--text2);
+    }
+
+    .summary-line.total {
+      border-top: 1px solid var(--border);
+      margin-top: 0.5rem;
+      padding-top: 0.75rem;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .summary-line.total .val { color: var(--accent2); }
+
+    /* JSON TAB */
+    .json-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      overflow-x: auto;
+    }
+
+    pre {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.7;
+      color: var(--text2);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* DOC TYPE BADGE */
+    .doc-type {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(124,107,255,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(124,107,255,0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ERROR */
+    .error-box {
+      background: rgba(255,107,107,0.08);
+      border: 1px solid rgba(255,107,107,0.3);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      color: var(--accent3);
+      font-size: 0.9rem;
+      display: none;
+      margin-top: 1rem;
+    }
+    .error-box.show { display: block; }
+
+    /* LOADING */
+    .loading-state {
+      text-align: center;
+      padding: 3rem;
+      display: none;
+    }
+    .loading-state.show { display: block; }
+
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      color: var(--text2);
+      font-size: 0.9rem;
+    }
+
+    .loading-sub {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text3);
+      margin-top: 0.3rem;
+    }
+
+    /* EMPTY STATE */
+    .empty-items {
+      padding: 2rem;
+      text-align: center;
+      color: var(--text3);
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 640px) {
+      header { padding: 1rem; }
+      main { padding: 1.5rem 1rem 3rem; }
+      .hero { padding: 2rem 0 1.5rem; }
+      .drop-zone { padding: 2rem 1rem; }
+      .cards-grid { grid-template-columns: 1fr; }
+      .tabs { overflow-x: auto; }
+      .tab { white-space: nowrap; }
+      .summary-row { justify-content: stretch; }
+      .summary-box { width: 100%; min-width: unset; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Aibys <span style="color:var(--text2);font-weight:400">/ Invoice Extractor</span>
+  </div>
+  <div class="status-badge">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">checking...</span>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="hero-tag">Document Intelligence</div>
+    <h1>Extract any <span>invoice</span> or receipt<br>in seconds</h1>
+    <p>Upload a PDF or image. AI extracts all data into a structured table — ready to export as CSV.</p>
+  </div>
+
+  <div class="upload-section">
+    <div class="drop-zone" id="drop-zone">
+      <span class="drop-icon">📄</span>
+      <div class="drop-title">Drop your file here</div>
+      <div class="drop-sub">PDF, JPG, PNG, WEBP · Max 20MB</div>
+      <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png,.webp" />
+    </div>
+
+    <div class="file-preview" id="file-preview">
+      <span class="file-icon" id="file-icon">📄</span>
+      <div class="file-info">
+        <div class="file-name" id="file-name"></div>
+        <div class="file-size" id="file-size"></div>
+      </div>
+      <button class="btn-remove" id="btn-remove" title="Remove file">✕</button>
+    </div>
+
+    <div class="error-box" id="error-box"></div>
+
+    <button class="btn-primary" id="btn-extract" disabled>
+      Extract Data
+    </button>
+  </div>
+
+  <div class="loading-state" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Analyzing document with AI...</div>
+    <div class="loading-sub">This may take 15–60 seconds</div>
+  </div>
+
+  <div id="results">
+    <div class="results-header">
+      <div class="results-title">Extracted Data</div>
+      <button class="btn-export" id="btn-export">
+        ↓ Export CSV
+      </button>
+    </div>
+
+    <div id="doc-type-badge" class="doc-type"></div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="structured">Structured View</button>
+      <button class="tab" data-tab="json">Raw JSON</button>
+    </div>
+
+    <div class="tab-content active" id="tab-structured">
+      <div class="cards-grid" id="cards-grid"></div>
+      <div class="table-wrap" id="items-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Qty</th>
+              <th style="text-align:right">Unit Price</th>
+              <th style="text-align:right">Total</th>
+            </tr>
+          </thead>
+          <tbody id="items-body"></tbody>
+        </table>
+      </div>
+      <div class="summary-row">
+        <div class="summary-box" id="summary-box"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-json">
+      <div class="json-box">
+        <pre id="json-output"></pre>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  let currentFile = null;
+  let currentData = null;
+
+  // Status check
+  async function checkStatus() {
+    try {
+      const res = await fetch('/health');
+      const data = await res.json();
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      if (data.ollama === 'connected') {
+        dot.classList.add('online');
+        text.textContent = 'ollama connected';
+      } else {
+        dot.classList.add('offline');
+        text.textContent = 'ollama offline';
+      }
+    } catch {
+      document.getElementById('status-dot').classList.add('offline');
+      document.getElementById('status-text').textContent = 'server error';
+    }
+  }
+  checkStatus();
+
+  // Drop zone
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const btnExtract = document.getElementById('btn-extract');
+  const filePreview = document.getElementById('file-preview');
+  const errorBox = document.getElementById('error-box');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) setFile(file);
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) setFile(e.target.files[0]);
+  });
+
+  document.getElementById('btn-remove').addEventListener('click', () => {
+    currentFile = null;
+    fileInput.value = '';
+    filePreview.classList.remove('show');
+    btnExtract.disabled = true;
+    hideError();
+    hideResults();
+  });
+
+  function setFile(file) {
+    currentFile = file;
+    document.getElementById('file-name').textContent = file.name;
+    document.getElementById('file-size').textContent = formatSize(file.size);
+    const ext = file.name.split('.').pop().toLowerCase();
+    document.getElementById('file-icon').textContent = ext === 'pdf' ? '📋' : '🖼️';
+    filePreview.classList.add('show');
+    btnExtract.disabled = false;
+    hideError();
+    hideResults();
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  // Extract
+  btnExtract.addEventListener('click', async () => {
+    if (!currentFile) return;
+
+    hideError();
+    hideResults();
+    showLoading(true);
+    btnExtract.disabled = true;
+    btnExtract.classList.add('loading');
+    btnExtract.textContent = 'Extracting...';
+
+    const formData = new FormData();
+    formData.append('file', currentFile);
+
+    try {
+      const res = await fetch('/extract', { method: 'POST', body: formData });
+      const json = await res.json();
+
+      if (!res.ok) {
+        showError(json.detail || 'Extraction failed.');
+        return;
+      }
+
+      currentData = json.data;
+      renderResults(currentData);
+    } catch (err) {
+      showError('Network error: ' + err.message);
+    } finally {
+      showLoading(false);
+      btnExtract.disabled = false;
+      btnExtract.classList.remove('loading');
+      btnExtract.textContent = 'Extract Data';
+    }
+  });
+
+  function showLoading(show) {
+    document.getElementById('loading').classList.toggle('show', show);
+  }
+
+  function showError(msg) {
+    errorBox.textContent = '⚠ ' + msg;
+    errorBox.classList.add('show');
+  }
+
+  function hideError() { errorBox.classList.remove('show'); }
+  function hideResults() {
+    document.getElementById('results').classList.remove('show');
+    currentData = null;
+  }
+
+  // Render results
+  function renderResults(data) {
+    // Doc type badge
+    const badge = document.getElementById('doc-type-badge');
+    badge.textContent = '● ' + (data.document_type || 'document').toUpperCase();
+
+    // Cards
+    const grid = document.getElementById('cards-grid');
+    grid.innerHTML = '';
+
+    const sections = [
+      { label: 'Document Info', obj: data.document_info, fields: ['invoice_number','date','due_date','payment_method'] },
+      { label: 'Vendor', obj: data.vendor, fields: ['name','address','phone','email','website'] },
+      { label: 'Customer', obj: data.customer, fields: ['name','address','phone','email'] },
+    ];
+
+    sections.forEach(({ label, obj, fields }) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `<div class="card-label">${label}</div>`;
+      fields.forEach(f => {
+        const val = obj?.[f] || '';
+        const display = f.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        card.innerHTML += `
+          <div class="card-row">
+            <span class="card-key">${display}</span>
+            <span class="card-val ${val ? '' : 'empty'}">${val || 'n/a'}</span>
+          </div>`;
+      });
+      grid.appendChild(card);
+    });
+
+    // Items table
+    const tbody = document.getElementById('items-body');
+    tbody.innerHTML = '';
+    const items = data.items || [];
+    if (items.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" class="empty-items">No line items found</td></tr>`;
+    } else {
+      items.forEach(item => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${item.description || ''}</td>
+            <td class="td-num">${item.quantity || ''}</td>
+            <td class="td-num">${item.unit_price || ''}</td>
+            <td class="td-num">${item.total || ''}</td>
+          </tr>`;
+      });
+    }
+
+    // Summary
+    const summary = data.summary || {};
+    const currency = summary.currency || '';
+    const summaryBox = document.getElementById('summary-box');
+    summaryBox.innerHTML = '';
+
+    const lines = [
+      ['Subtotal', summary.subtotal],
+      ['Tax', summary.tax],
+      ['Discount', summary.discount],
+      ['Shipping', summary.shipping],
+    ].filter(([, v]) => v);
+
+    lines.forEach(([k, v]) => {
+      summaryBox.innerHTML += `<div class="summary-line"><span>${k}</span><span class="val">${currency} ${v}</span></div>`;
+    });
+
+    summaryBox.innerHTML += `
+      <div class="summary-line total">
+        <span>Total</span>
+        <span class="val">${currency} ${summary.total || '–'}</span>
+      </div>`;
+
+    // JSON
+    document.getElementById('json-output').textContent = JSON.stringify(data, null, 2);
+
+    document.getElementById('results').classList.add('show');
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Export CSV
+  document.getElementById('btn-export').addEventListener('click', async () => {
+    if (!currentData) return;
+    const res = await fetch('/export-csv', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: currentData })
+    });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = res.headers.get('Content-Disposition')?.split('filename=')[1] || 'invoice.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+</script>
+</body>
+</html>
