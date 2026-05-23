@@ -1,4 +1,9 @@
 # Aibys Invoice Extractor
+<img width="1920" height="1080" alt="Screenshot (1087)" src="https://github.com/user-attachments/assets/b4786404-14e3-4004-afda-6d1cf4e58901" />
+
+<img width="1920" height="1080" alt="Screenshot (1089)" src="https://github.com/user-attachments/assets/3ce3ba31-1187-45c7-93fd-b8ad1c8ac901" />
+<img width="1920" height="1080" alt="Screenshot (1088)" src="https://github.com/user-attachments/assets/58cddd5c-c383-47c6-8b7f-1a65b3d723a0" />
+
 
 AI-powered invoice and receipt data extractor. Upload PDFs or images, extract structured data with Ollama, then keep the results in local JSON and CSV files for ongoing use.
 
